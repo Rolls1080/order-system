@@ -6,8 +6,6 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# ← A добавляет сюда: producer = KafkaProducer(...)  (на самом деле это B)
-# ← A добавляет сюда: def db(): ...
 def db():
     return mysql.connector.connect(
         host=os.getenv("MYSQL_HOST", "mysql"),
@@ -16,13 +14,29 @@ def db():
         database=os.getenv("MYSQL_DATABASE", "orders"),
     )
 
-# ← B добавляет сюда: producer = KafkaProducer(...)
-# ← B добавляет сюда: def publish_rabbit(...)
+producer = KafkaProducer(
+    bootstrap_servers=os.getenv("KAFKA_BOOTSTRAP", "kafka:9092"),
+    key_serializer=lambda k: str(k).encode(),
+    value_serializer=lambda v: json.dumps(v).encode(),
+)
 
-@app.post("/api/orders")
+def publish_rabbit(event):
+    conn = pika.BlockingConnection(
+        pika.ConnectionParameters(os.getenv("RABBIT_HOST", "rabbitmq"))
+    )
+    ch = conn.channel()
+    ch.queue_declare(queue="order-notifications", durable=True)
+    ch.basic_publish(
+        exchange="",
+        routing_key="order-notifications",
+        body=json.dumps(event).encode(),
+        properties=pika.BasicProperties(delivery_mode=2),
+    )
+    conn.close()
+
+"/api/orders"
 def create_order():
     data = request.get_json()
-    # ← A: INSERT в MySQL
     buyer  = data["buyer"]
     item   = data["item"]
     amount = float(data["amount"])
@@ -44,5 +58,12 @@ def create_order():
         "item": item,
         "amount": amount,
     }
-    # ← B: producer.send(...) и publish_rabbit(...)
+
+    producer.send("order-events", key=order_id, value=event)
+    producer.flush()
+    publish_rabbit(event)
+
     return jsonify({"order_id": order_id}), 201
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
