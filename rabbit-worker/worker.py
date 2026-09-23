@@ -2,6 +2,7 @@ import json
 import time
 import pika
 
+# Ждём RabbitMQ до 60 секунд (30 попыток × 2 сек)
 for attempt in range(30):
     try:
         conn = pika.BlockingConnection(pika.ConnectionParameters("rabbitmq"))
@@ -16,6 +17,7 @@ ch = conn.channel()
 ch.queue_declare(queue="order-notifications", durable=True)
 ch.basic_qos(prefetch_count=1)
 
+
 def handle(ch, method, props, body):
     o = json.loads(body)
     print(
@@ -24,6 +26,7 @@ def handle(ch, method, props, body):
         flush=True,
     )
     ch.basic_ack(delivery_tag=method.delivery_tag)
+
 
 ch.basic_consume(queue="order-notifications", on_message_callback=handle)
 print("[УВЕДОМЛЕНИЕ] Воркер запущен, ожидание сообщений", flush=True)

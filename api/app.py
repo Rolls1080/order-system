@@ -34,7 +34,7 @@ def publish_rabbit(event):
     )
     conn.close()
 
-"/api/orders"
+@app.post("/api/orders")
 def create_order():
     data = request.get_json()
     buyer  = data["buyer"]
