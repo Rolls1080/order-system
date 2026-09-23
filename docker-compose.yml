@@ -1,0 +1,3 @@
+services:
+  # ← A добавляет сюда mysql, phpmyadmin, api, nginx
+  # ← B добавляет сюда kafka, rabbitmq, consumers, worker
