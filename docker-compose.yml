@@ -8,8 +8,6 @@ services:
       MYSQL_DATABASE: orders
       MYSQL_USER: app
       MYSQL_PASSWORD: app
-    ports:
-      - "3306:3306"
     volumes:
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
       - mysql-data:/var/lib/mysql
@@ -80,7 +78,6 @@ services:
     image: rabbitmq:3.10.7-management
     container_name: order-rabbitmq
     ports:
-      - "5672:5672"
       - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: guest
